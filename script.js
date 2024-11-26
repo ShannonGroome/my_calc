@@ -67,7 +67,6 @@ function tokenize(expression) {
   return tokens;
 }
 
-// Convert infix expression to postfix notation
 function infixToPostfix(tokens) {
   const precedence = { "+": 1, "-": 1, "*": 2, "/": 2, "^": 3 };
   const output = [];
@@ -83,11 +82,17 @@ function infixToPostfix(tokens) {
     } else if (token === "(") {
       operators.push(token);
     } else if (token === ")") {
+      // Handle closing parentheses
       while (operators.length && operators[operators.length - 1] !== "(") {
         output.push(operators.pop());
       }
       operators.pop(); // Remove the "("
+      // If the top of the stack is a function, add it to output
+      if (operators.length && ["sin", "cos", "tan", "deg"].includes(operators[operators.length - 1])) {
+        output.push(operators.pop());
+      }
     } else {
+      // Handle operators
       while (
         operators.length &&
         precedence[operators[operators.length - 1]] >= precedence[token]
@@ -104,6 +109,7 @@ function infixToPostfix(tokens) {
 
   return output;
 }
+
 
 function evaluatePostfix(postfix) {
   const stack = [];
