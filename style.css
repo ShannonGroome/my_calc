@@ -57,4 +57,25 @@ button:active {
   background: #bbb;
 }
 
+button:nth-last-child(2) {
+  background: #ff4d4d;
+  color: #fff;
+}
+
+button:nth-last-child(2):hover {
+  background: #e60000; 
+}
+
+button:last-child {
+  background: #4caf50; 
+  color: #fff; 
+}
+
+button:last-child:hover {
+  background: #45a049; 
+}
+
+
+
+
   

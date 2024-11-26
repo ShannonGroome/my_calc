@@ -21,45 +21,50 @@ function compute() {
   }
 }
 
-// Convert degrees to radians for trig functions
+
 function degToRad(angle) {
   return (angle * Math.PI) / 180;
 }
 
-// Evaluate mathematical expressions
-function evaluateExpression(expression) {
-  expression = expression
-    .replace(/sin\(/g, "Math.sin(")
-    .replace(/cos\(/g, "Math.cos(")
-    .replace(/tan\(/g, "Math.tan(")
-    .replace(/π/g, "Math.PI")
-    .replace(/e/g, "Math.E");
 
+function evaluateExpression(expression) {
   const tokens = tokenize(expression);
   const postfix = infixToPostfix(tokens);
   return evaluatePostfix(postfix);
 }
 
-// Tokenize the expression into numbers, operators, and parentheses
+// Tokenize the expression into numbers, operators, and functions
 function tokenize(expression) {
-  // Regex to match numbers (with optional negative signs), operators, and functions
-  const regex = /(?:\d+\.\d*|\d*\.?\d+)(?:[eE][+-]?\d+)?|[()+\-*/^π]|\b(?:Math\.\w+)\b/g;
-  const result = [];
+  const regex = /(?:\d+\.\d*|\d*\.?\d+)(?:[eE][+-]?\d+)?|π|e|[()+\-*/^]|sin|cos|tan|deg/g;
+  const tokens = [];
   let match;
 
-  // Handle the expression and extract tokens
   while ((match = regex.exec(expression)) !== null) {
-    result.push(match[0]);
+    let token = match[0];
+
+    // Replace constants π and e
+    if (token === "π") {
+      token = Math.PI.toString();
+    } else if (token === "e") {
+      token = Math.E.toString();
+    }
+
+    tokens.push(token);
   }
 
-  // Handling negative signs correctly (before numbers or functions)
-  for (let i = 0; i < result.length; i++) {
-    if (result[i] === "-" && (i === 0 || ["+", "-", "*", "/", "^", "("].includes(result[i - 1]))) {
-      result[i] = "_NEG_"; // Mark negative signs
+  // Handle unary minus (negative numbers)
+  for (let i = 0; i < tokens.length; i++) {
+    if (
+      tokens[i] === "-" &&
+      (i === 0 || ["+", "-", "*", "/", "^", "("].includes(tokens[i - 1]))
+    ) {
+      // Merge "-" with the next number or constant
+      tokens[i + 1] = `-${tokens[i + 1]}`;
+      tokens.splice(i, 1); // Remove the "-"
     }
   }
 
-  return result;
+  return tokens;
 }
 
 // Convert infix expression to postfix notation
@@ -70,14 +75,16 @@ function infixToPostfix(tokens) {
 
   tokens.forEach((token) => {
     if (!isNaN(token)) {
-      output.push(parseFloat(token)); // Numbers go to output
-    } else if (token.startsWith("Math.")) {
-      operators.push(token); // Functions go to operator stack
+      // Push numbers to output
+      output.push(parseFloat(token));
+    } else if (["sin", "cos", "tan", "deg"].includes(token)) {
+      // Push functions to the operator stack
+      operators.push(token);
     } else if (token === "(") {
-      operators.push(token); // Push opening parentheses to stack
+      operators.push(token);
     } else if (token === ")") {
       while (operators.length && operators[operators.length - 1] !== "(") {
-        output.push(operators.pop()); // Pop until "("
+        output.push(operators.pop());
       }
       operators.pop(); // Remove the "("
     } else {
@@ -85,35 +92,39 @@ function infixToPostfix(tokens) {
         operators.length &&
         precedence[operators[operators.length - 1]] >= precedence[token]
       ) {
-        output.push(operators.pop()); // Pop operators of higher or equal precedence
+        output.push(operators.pop());
       }
       operators.push(token);
     }
   });
 
   while (operators.length) {
-    output.push(operators.pop()); // Pop remaining operators
+    output.push(operators.pop());
   }
 
   return output;
 }
 
-// Evaluate postfix expression
 function evaluatePostfix(postfix) {
   const stack = [];
 
   postfix.forEach((token) => {
-    if (token === "_NEG_") {
-      // Handle the negative sign by applying it to the next value
-      const val = stack.pop();
-      stack.push(-val);
-    } else if (typeof token === "number") {
-      stack.push(token); // Push the number to stack
-    } else if (token.startsWith("Math.")) {
+    if (!isNaN(token)) {
+      // Push numbers to stack
+      stack.push(parseFloat(token));
+    } else if (["sin", "cos", "tan"].includes(token)) {
+
       const value = stack.pop();
-      const func = Function("return " + token)(); // Get the Math function
-      stack.push(func(value));
+      if (token === "sin") stack.push(Math.sin(value));
+      if (token === "cos") stack.push(Math.cos(value));
+      if (token === "tan") stack.push(Math.tan(value));
+
+    } else if (token === "deg") {
+
+      const radians = stack.pop();
+      stack.push((radians * 180) / Math.PI);
     } else {
+
       const b = stack.pop();
       const a = stack.pop();
       switch (token) {
